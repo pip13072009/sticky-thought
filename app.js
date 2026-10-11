@@ -30,10 +30,11 @@
     { id: 'night', label: 'Night', dot: '#6d7f99' }
   ];
 
+  // All three are always available; the play screen has a switcher and remembers the last one.
   var FIDGETS = [
-    { id: 'bubbles', label: 'Bubble pop' },
-    { id: 'lava', label: 'Lava lamp' },
-    { id: 'slime', label: 'Slime swirl' }
+    { id: 'bubbles', label: 'Pop', name: 'Bubble pop' },
+    { id: 'lava', label: 'Lava', name: 'Lava lamp' },
+    { id: 'slime', label: 'Slime', name: 'Slime swirl' }
   ];
 
   // {name} is swapped for whatever she calls it (default "OCD").
@@ -47,9 +48,8 @@
       several: ["This feels like {name}'s pattern. Loud doesn't mean true."]
     },
     moves: {
-      sit: 'Let it sit',
       carry: 'Carry on anyway',
-      fidget: 'Fidget',
+      fidget: 'Something to play with',
       other: 'Do something else'
     },
     closing: [
@@ -326,8 +326,7 @@
   };
 
   SCREENS.move = function () {
-    var order = ['sit', 'carry', 'fidget', 'other'];
-    if (session.repeat) order = ['carry', 'sit', 'fidget', 'other'];
+    var order = ['carry', 'fidget', 'other'];
 
     var buttons = order.map(function (k) {
       var cls = 'btn big' + (session.repeat && k === 'carry' ? ' boost primary' : '');
@@ -351,14 +350,33 @@
   };
 
   SCREENS.fidget = function () {
-    var canvas = h('canvas', { 'aria-label': FIDGETS.filter(function (f) { return f.id === settings.fidget; })[0].label, role: 'img' });
+    if (!FIDGETS.some(function (f) { return f.id === settings.fidget; })) settings.fidget = FIDGETS[0].id;
+    var canvas = h('canvas', { role: 'img' });
+    var tabs = h('div', { class: 'fidget-tabs', role: 'group', 'aria-label': 'Choose one' });
+
+    function run(id) {
+      if (stopFidget) { stopFidget(); stopFidget = null; }
+      settings.fidget = id; save();
+      Array.prototype.forEach.call(tabs.children, function (t) {
+        t.setAttribute('aria-pressed', t.getAttribute('data-id') === id ? 'true' : 'false');
+      });
+      canvas.setAttribute('aria-label', FIDGETS.filter(function (f) { return f.id === id; })[0].name);
+      stopFidget = startFidget(id, canvas);
+    }
+
+    FIDGETS.forEach(function (f) {
+      tabs.appendChild(h('button', { class: 'fidget-tab', 'data-id': f.id, text: f.label,
+        onclick: function () { if (settings.fidget !== f.id) run(f.id); } }));
+    });
+
     var wrap = h('div', { class: 'fidget-wrap' },
       canvas,
+      tabs,
       h('button', { class: 'fidget-done', text: 'Done', onclick: finishSession })
     );
     // Start after the canvas is in the page so it can size itself.
     setTimeout(function () {
-      if (screen === 'fidget') stopFidget = startFidget(settings.fidget, canvas);
+      if (screen === 'fidget') run(settings.fidget);
     }, 0);
     return h('section', { class: 'screen' }, wrap);
   };
@@ -384,9 +402,9 @@
 
   function setupShell(title, sub, body, onNext) {
     var dots = h('div', { class: 'dots', 'aria-hidden': 'true' },
-      [0, 1, 2].map(function (i) { return h('span', { class: i === setupStep ? 'on' : '' }); }));
+      [0, 1].map(function (i) { return h('span', { class: i === setupStep ? 'on' : '' }); }));
     function advance() {
-      if (setupStep < 2) { setupStep++; show('setup'); }
+      if (setupStep < 1) { setupStep++; show('setup'); }
       else { settings.setupDone = true; save(); goHome(); }
     }
     return h('section', { class: 'screen' },
@@ -399,7 +417,7 @@
       body,
       h('div', { class: 'bottom stack' },
         dots,
-        h('button', { class: 'btn primary big', text: setupStep < 2 ? 'Next' : 'All set', onclick: function () {
+        h('button', { class: 'btn primary big', text: setupStep < 1 ? 'Next' : 'All set', onclick: function () {
           if (onNext) onNext();
           save();
           advance();
@@ -417,10 +435,7 @@
         h('div', { class: 'field' }, input),
         function () { settings.name = input.value.trim(); });
     }
-    if (setupStep === 1) {
-      return setupShell('Pick a look', 'It follows your phone’s dark mode too.', themePicker(), null);
-    }
-    return setupShell('Pick a fidget', 'For when you want something to do with your hands.', fidgetPicker(), null);
+    return setupShell('Pick a look', 'It follows your phone’s dark mode too.', themePicker(), null);
   };
 
   function themePicker() {
@@ -431,19 +446,6 @@
         Array.prototype.forEach.call(wrap.children, function (c) { c.setAttribute('aria-pressed', 'false'); });
         b.setAttribute('aria-pressed', 'true');
       } }, h('span', { class: 'dot', style: 'background:' + t.dot }), h('span', { text: t.label }));
-      wrap.appendChild(b);
-    });
-    return wrap;
-  }
-
-  function fidgetPicker() {
-    var wrap = h('div', { class: 'options' });
-    FIDGETS.forEach(function (f) {
-      var b = h('button', { class: 'option', 'aria-pressed': settings.fidget === f.id ? 'true' : 'false', text: f.label, onclick: function () {
-        settings.fidget = f.id; save();
-        Array.prototype.forEach.call(wrap.children, function (c) { c.setAttribute('aria-pressed', 'false'); });
-        b.setAttribute('aria-pressed', 'true');
-      } });
       wrap.appendChild(b);
     });
     return wrap;
@@ -487,9 +489,6 @@
       h('h2', { text: 'Look' }),
       themePicker(),
 
-      h('h2', { text: 'Fidget' }),
-      fidgetPicker(),
-
       h('h2', { text: 'Words' }),
       h('p', { class: 'muted small', text: 'Make the words your own.' }),
       h('button', { class: 'btn', text: 'Edit the words', onclick: function () { show('phrases'); } }),
@@ -528,7 +527,7 @@
         function (v) { p.reflect[f.id] = v; });
     });
 
-    var moveFields = ['sit', 'carry', 'fidget', 'other'].map(function (k) {
+    var moveFields = ['carry', 'fidget', 'other'].map(function (k) {
       return textField('m-' + k, DEFAULT_PHRASES.moves[k], function () { return p.moves[k]; },
         function (v) { p.moves[k] = v; });
     });
@@ -630,8 +629,10 @@
         cells = [];
         r = Math.max(26, Math.min(W, H) / 9);
         var gap = r * 2.25, rowH = gap * 0.87;
-        var cols = Math.floor((W - r) / gap), rows = Math.floor((H - r * 2.5) / rowH);
-        var ox = (W - (cols - 1) * gap - gap / 2) / 2, oy = (H - (rows - 1) * rowH) / 2 - r * 0.6;
+        // Keep clear of the switcher at the top and the Done button at the bottom.
+        var top = 76, bottom = 76, avail = H - top - bottom;
+        var cols = Math.floor((W - r) / gap), rows = Math.max(1, Math.floor((avail - 2 * r) / rowH) + 1);
+        var ox = (W - (cols - 1) * gap - gap / 2) / 2, oy = top + (avail - (rows - 1) * rowH) / 2;
         for (var y = 0; y < rows; y++) for (var x = 0; x < cols; x++) {
           cells.push({ x: ox + x * gap + (y % 2 ? gap / 2 : 0), y: oy + y * rowH, popped: false, t: 0, grow: 1 });
         }
@@ -741,9 +742,8 @@
         },
         up: function (id) { delete pointers[id]; },
         draw: function (dt) {
-          ctx.globalAlpha = calm ? 0.02 : 0.04;
-          ctx.fillStyle = col.bg; ctx.fillRect(0, 0, W, H);
           ctx.globalAlpha = 1;
+          ctx.fillStyle = col.bg; ctx.fillRect(0, 0, W, H);
           var cx = W / 2, cy = H / 2, swirl = calm ? 0.05 : 0.25;
           for (var i = blobs.length - 1; i >= 0; i--) {
             var bl = blobs[i];
@@ -751,7 +751,7 @@
             bl.vx += -ry * swirl * dt * 0.6; bl.vy += rx * swirl * dt * 0.6;
             bl.vx *= 0.96; bl.vy *= 0.96;
             bl.x += bl.vx * dt; bl.y += bl.vy * dt;
-            bl.life -= dt * (calm ? 0.25 : 0.4);
+            bl.life -= dt * (calm ? 0.12 : 0.2);
             if (bl.life <= 0) { blobs.splice(i, 1); continue; }
             ctx.globalAlpha = Math.min(0.5, bl.life * 0.5);
             ctx.beginPath(); ctx.arc(bl.x, bl.y, bl.r * (1.2 - bl.life * 0.2), 0, Math.PI * 2);
@@ -761,7 +761,7 @@
         }
       };
       function add(p, dx, dy) {
-        if (blobs.length > 600) blobs.shift();
+        if (blobs.length > 900) blobs.shift();
         blobs.push({ x: p.x, y: p.y, vx: dx * 4, vy: dy * 4, r: 18 + Math.random() * 16, life: 1,
           c: Math.random() < 0.5 ? a : c2 });
       }

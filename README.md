@@ -9,7 +9,7 @@ Everything is stored in the browser's `localStorage` on the phone and nowhere el
 | --- | --- |
 | `index.html` | The page |
 | `styles.css` | Themes (light + dark) and layout |
-| `app.js` | All screens, settings, and the three fidgets |
+| `app.js` | All screens, settings, and the three play toys (pop, lava, slime) |
 | `sw.js` | Service worker — caches everything so it works offline |
 | `manifest.webmanifest` | Lets Chrome install it to the home screen |
 | `icons/` | App icons |
@@ -38,7 +38,7 @@ Open http://localhost:8000. (Service workers need `localhost` or HTTPS.)
 
 ## What's stored
 
-- `pebble.settings.v1` — name, theme, fidget, edited words, written-nudge on/off.
+- `pebble.settings.v1` — name, theme, last toy used on the play screen, edited words, written-nudge on/off.
 - `pebble.last.v1` — time the last session finished (used only for the repeat-visit nudge).
 
 Feelings tapped during a session are never saved. Settings → "Delete everything" removes both keys.

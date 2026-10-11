@@ -1,5 +1,5 @@
 // Bump this when any file changes so phones pick up the new version.
-var CACHE = 'pebble-v1';
+var CACHE = 'pebble-v2';
 var ASSETS = [
   './',
   'index.html',

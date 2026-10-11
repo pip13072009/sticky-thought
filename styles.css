@@ -230,3 +230,16 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
   .screen { animation: none; }
   .switch::after { transition: none; }
 }
+
+.fidget-tabs {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  top: max(12px, env(safe-area-inset-top));
+  display: flex; gap: 4px; padding: 4px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 26px;
+  opacity: .92;
+}
+.fidget-tab {
+  min-width: 76px; padding: 0 16px; border-radius: 22px; background: transparent;
+  color: var(--muted); font-size: 1rem;
+}
+.fidget-tab[aria-pressed="true"] { background: var(--chip-on); color: var(--text); font-weight: 600; }
